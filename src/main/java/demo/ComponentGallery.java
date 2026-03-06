@@ -15,6 +15,8 @@
 package demo;
 
 import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.FlatDarculaLaf;
+import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
@@ -27,6 +29,7 @@ import java.awt.*;
 import java.text.ParseException;
 
 public class ComponentGallery {
+    private JFrame frame;
 
     public static void main(String[] args) {
         // Register custom FlatLaf defaults from src/main/resources/demo/themes.
@@ -46,7 +49,7 @@ public class ComponentGallery {
 
     private void showUI() {
         // Top-level application window.
-        JFrame frame = new JFrame("FlatLaf Component Gallery");
+        frame = new JFrame("FlatLaf Component Gallery");
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         // Main vertical container with section cards.
@@ -273,7 +276,7 @@ public class ComponentGallery {
         JLabel l = new JLabel("Label");
         l.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(l);
-        p.add(Box.createVerticalStrut(4));
+        p.add(Box.createVerticalStrut(6));
 
         String placeholder = "Select an option";
         String[] items = {placeholder, "Option one", "Option two", "Option three", "Option four", "Option five"};
@@ -292,8 +295,50 @@ public class ComponentGallery {
         disabled.setAlignmentX(Component.LEFT_ALIGNMENT);
         disabled.addActionListener(e -> cb.setEnabled(!disabled.isSelected()));
         p.add(disabled);
+        p.add(Box.createVerticalStrut(8));
+
+        JLabel themeLabel = new JLabel("Theme");
+        themeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(themeLabel);
+        p.add(Box.createVerticalStrut(4));
+
+        JComboBox<String> themeSelector = new JComboBox<>(new String[]{
+                "LigoLab - Day",
+                "LigoLab - Night",
+                "LigoLab - Twilight"
+        });
+        themeSelector.setAlignmentX(Component.LEFT_ALIGNMENT);
+        themeSelector.setPreferredSize(new Dimension(220, 24));
+        themeSelector.setMaximumSize(new Dimension(220, 24));
+        themeSelector.addActionListener(e -> {
+            Object selected = themeSelector.getSelectedItem();
+            if (selected != null) {
+                applyTheme(selected.toString());
+            }
+        });
+        p.add(themeSelector);
 
         return p;
+    }
+
+    private void applyTheme(String theme) {
+        switch (theme) {
+            case "LigoLab - Night":
+                FlatDarkLaf.setup();
+                break;
+            case "LigoLab - Twilight":
+                FlatDarculaLaf.setup();
+                break;
+            case "LigoLab - Day":
+            default:
+                FlatLightLaf.setup();
+                break;
+        }
+        if (frame != null) {
+            SwingUtilities.updateComponentTreeUI(frame);
+            frame.pack();
+            frame.setSize(720, 900);
+        }
     }
 
     private JComponent buildCombobox() {
@@ -573,7 +618,7 @@ public class ComponentGallery {
         tf.setLeadingComponent(leading);
 
         // Trailing controls with base paddings: text->icon 4, icon->icon 4, right 4.
-        JButton clear = new JButton("\u2715");
+        JButton clear = new JButton(new FlatSVGIcon("demo/icons/close.svg", 16, 16));
         clear.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
         clear.setFocusable(false);
         clear.setMargin(new Insets(0, 0, 0, 0));
@@ -652,7 +697,7 @@ public class ComponentGallery {
         l.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(l);
 
-        p.add(Box.createVerticalStrut(6));
+        p.add(Box.createVerticalStrut(4));
 
         c.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(c);
