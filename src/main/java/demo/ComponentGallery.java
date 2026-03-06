@@ -412,8 +412,7 @@ public class ComponentGallery {
         p.add(l);
         p.add(Box.createVerticalStrut(4));
 
-        Icon chevronDown = new FlatSVGIcon("demo/icons/shevronDown.svg", 16, 16);
-        JButton field = new JButton("Select multiple", chevronDown);
+        JButton field = new JButton("Select multiple", new FlatSVGIcon("demo/icons/shevronDown.svg", 16, 16));
         field.setHorizontalAlignment(SwingConstants.LEFT);
         field.setHorizontalTextPosition(SwingConstants.LEFT);
         field.setIconTextGap(4);
@@ -423,28 +422,56 @@ public class ComponentGallery {
         field.putClientProperty(FlatClientProperties.STYLE_CLASS, "secondary");
         field.putClientProperty(FlatClientProperties.STYLE, "margin: 4,4,4,4");
         p.add(field);
-        p.add(Box.createVerticalStrut(4));
 
         JPopupMenu popup = new JPopupMenu();
         popup.setBorder(BorderFactory.createLineBorder(UIManager.getColor("Component.borderColor")));
 
-        JCheckBox[] options = new JCheckBox[]{
-                new JCheckBox("Option one"),
-                new JCheckBox("Option two"),
-                new JCheckBox("Option three"),
-                new JCheckBox("Option four"),
-                new JCheckBox("Option five")
-        };
-        for (JCheckBox cb : options) {
+        JPanel popupList = new JPanel();
+        popupList.setLayout(new BoxLayout(popupList, BoxLayout.Y_AXIS));
+        popupList.setOpaque(false);
+
+        String[] optionTexts = {"Option one", "Option two", "Option three", "Option four", "Option five",
+                "Option six", "Option seven", "Option eight", "Option nine", "Option ten"};
+        JCheckBox[] options = new JCheckBox[optionTexts.length];
+        for (int i = 0; i < optionTexts.length; i++) {
+            JCheckBox cb = new JCheckBox(optionTexts[i]);
             cb.setOpaque(true);
             cb.setBackground(UIManager.getColor("PopupMenu.background"));
             cb.setBorder(new EmptyBorder(4, 4, 4, 4));
             cb.setPreferredSize(new Dimension(220, 24));
+            if (i == 2) {
+                cb.setEnabled(false); // disabled-row state example from spec
+            }
+            cb.addItemListener(e -> {
+                if (cb.isEnabled()) {
+                    cb.setForeground(UIManager.getColor("Component.foreground"));
+                }
+            });
+            cb.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseEntered(java.awt.event.MouseEvent e) {
+                    if (cb.isEnabled()) {
+                        Color hover = UIManager.getColor("Custom.neutral_5");
+                        cb.setBackground(hover != null ? hover : UIManager.getColor("Panel.background"));
+                    }
+                }
+
+                @Override
+                public void mouseExited(java.awt.event.MouseEvent e) {
+                    cb.setBackground(UIManager.getColor("PopupMenu.background"));
+                }
+            });
             cb.addActionListener(e -> updateSelectboxFieldText(field, options));
-            popup.add(cb);
+            options[i] = cb;
+            popupList.add(cb);
         }
 
+        JScrollPane scroll = new JScrollPane(popupList);
+        scroll.setBorder(null);
+        scroll.setPreferredSize(new Dimension(220, 180));
+        popup.add(scroll);
         popup.addSeparator();
+
         JButton submit = new JButton("Submit");
         submit.setHorizontalAlignment(SwingConstants.CENTER);
         submit.setPreferredSize(new Dimension(220, 24));
@@ -453,31 +480,18 @@ public class ComponentGallery {
         popup.add(submit);
 
         field.addActionListener(e -> {
-            if (popup.isVisible()) {
-                popup.setVisible(false);
-            } else {
+            if (field.isEnabled()) {
                 popup.show(field, 0, field.getHeight() + 2);
             }
         });
-
-        JCheckBox disabled = new JCheckBox("Disabled");
-        disabled.setOpaque(false);
-        disabled.setAlignmentX(Component.LEFT_ALIGNMENT);
-        disabled.addActionListener(e -> {
-            boolean isDisabled = disabled.isSelected();
-            field.setEnabled(!isDisabled);
-            if (popup.isVisible()) {
-                popup.setVisible(false);
-            }
-            for (JCheckBox cb : options) {
-                cb.setEnabled(!isDisabled);
-            }
-            submit.setEnabled(!isDisabled);
-        });
-
-        p.add(Box.createVerticalStrut(8));
-        p.add(disabled);
         return p;
+    }
+
+    private String colorToHex(Color c) {
+        if (c == null) {
+            return "#000000";
+        }
+        return String.format("#%02x%02x%02x", c.getRed(), c.getGreen(), c.getBlue());
     }
 
     private void updateSelectboxFieldText(JButton field, JCheckBox[] options) {
@@ -491,9 +505,9 @@ public class ComponentGallery {
             }
             selectedCount++;
             if (firstSelected == null) {
-                firstSelected = cb.getText();
+                firstSelected = cb.getText().replace("Option ", "");
             } else if (secondSelected == null) {
-                secondSelected = cb.getText();
+                secondSelected = cb.getText().replace("Option ", "");
             }
         }
 
@@ -502,9 +516,9 @@ public class ComponentGallery {
         } else if (selectedCount == 1) {
             field.setText(firstSelected);
         } else if (selectedCount == 2) {
-            field.setText(firstSelected + ", " + secondSelected);
+            field.setText(firstSelected + "   " + secondSelected);
         } else {
-            field.setText(firstSelected + ", " + secondSelected + " +" + (selectedCount - 2));
+            field.setText(firstSelected + "   " + secondSelected + "   +" + (selectedCount - 2));
         }
     }
 
