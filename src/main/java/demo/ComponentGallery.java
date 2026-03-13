@@ -1,15 +1,12 @@
 /*
  * ComponentGallery.java
  *
- * A small “kitchen sink” window that instantiates one of each component
- * (standard + custom styles) to visually validate your FlatLaf theme.
- *
  * Requirements:
  * - flatlaf (core)
  * - flatlaf-extras (for FlatTextField leading/trailing icons; optional)
  *
- * Tip: Put your .properties into src/main/resources/themes/ and call
- * FlatLaf.registerCustomDefaultsSource("themes") before setup().
+ * Tip: Load your .properties from resources or register a custom defaults source
+ * before installing the Look and Feel.
  */
 
 package demo;
@@ -17,27 +14,38 @@ package demo;
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatDarculaLaf;
 import com.formdev.flatlaf.FlatDarkLaf;
-import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.formdev.flatlaf.extras.components.FlatTextField;
+import com.formdev.flatlaf.FlatPropertiesLaf;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.text.MaskFormatter;
 import java.awt.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.ParseException;
 
 public class ComponentGallery {
+    private static final int FIELD_WIDTH = 220;
+    private static final int FIELD_HEIGHT = 24;
+    private static final int DROPDOWN_ROW_HEIGHT = 32;
+    private static final String CUSTOM_DEFAULTS_SOURCE = "demo.themes";
+    private static final String LIGHT_THEME_RESOURCE = "/demo/themes/FlatLightLaf.properties";
+
     private JFrame frame;
 
     public static void main(String[] args) {
         // Register custom FlatLaf defaults from src/main/resources/demo/themes.
-        FlatLaf.registerCustomDefaultsSource("demo.themes");
-        // Install FlatLightLaf once (skip if already installed by Main).
-        if (!(UIManager.getLookAndFeel() instanceof FlatLightLaf)) {
-            FlatLightLaf.setup();
-        }
+        FlatLaf.registerCustomDefaultsSource(CUSTOM_DEFAULTS_SOURCE);
+        installDayTheme();
 
         // Optional platform/UI behavior tweaks.
         System.setProperty("apple.laf.useScreenMenuBar", "true");
@@ -45,6 +53,18 @@ public class ComponentGallery {
 
         // Build and show the Swing UI on the Event Dispatch Thread.
         SwingUtilities.invokeLater(() -> new ComponentGallery().showUI());
+    }
+
+    private static void installDayTheme() {
+        try (InputStream in = ComponentGallery.class.getResourceAsStream(LIGHT_THEME_RESOURCE)) {
+            if (in == null) {
+                throw new IllegalStateException("Theme resource not found: " + LIGHT_THEME_RESOURCE);
+            }
+
+            UIManager.setLookAndFeel(new FlatPropertiesLaf("LigoLab - Day", in));
+        } catch (IOException | UnsupportedLookAndFeelException ex) {
+            throw new IllegalStateException("Failed to load theme from " + LIGHT_THEME_RESOURCE, ex);
+        }
     }
 
     private void showUI() {
@@ -101,12 +121,9 @@ public class ComponentGallery {
         h.putClientProperty(FlatClientProperties.STYLE, "font: +2"); // FlatLaf text style bump
         p.add(h, BorderLayout.NORTH);
 
-        // Card-like container with themed border around section content.
+        // Card-like container for section content without an outer border.
         JPanel card = new JPanel(new BorderLayout());
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UIManager.getColor("Component.borderColor")),
-                new EmptyBorder(16, 16, 16, 16)
-        ));
+        card.setBorder(new EmptyBorder(16, 16, 16, 16));
         card.add(body, BorderLayout.CENTER);
 
         p.add(card, BorderLayout.CENTER);
@@ -153,23 +170,12 @@ public class ComponentGallery {
     }
 
     private JComponent buildValidation() {
-        // Vertical container for fields with validation outlines.
+        // One interactive validation field that exposes the error states from the design system.
         JPanel p = new JPanel();
         p.setOpaque(false);
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
 
-        // JTextField with FlatLaf error outline.
-        JTextField error = new JTextField();
-        error.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Placeholder");
-        error.putClientProperty(FlatClientProperties.OUTLINE, FlatClientProperties.OUTLINE_ERROR);
-
-        // JTextField with FlatLaf warning outline.
-        JTextField warning = new JTextField("Filled");
-        warning.putClientProperty(FlatClientProperties.OUTLINE, FlatClientProperties.OUTLINE_WARNING);
-
-        p.add(labeled("Outline = error", error));
-        p.add(Box.createVerticalStrut(10));
-        p.add(labeled("Outline = warning", warning));
+        p.add(validationInputDemo());
         return p;
     }
 
@@ -282,8 +288,9 @@ public class ComponentGallery {
         String[] items = {placeholder, "Option one", "Option two", "Option three", "Option four", "Option five"};
         JComboBox<String> cb = new JComboBox<>(items);
         cb.setAlignmentX(Component.LEFT_ALIGNMENT);
-        cb.setPreferredSize(new Dimension(220, 24));
-        cb.setMaximumSize(new Dimension(220, 24));
+        cb.setPreferredSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+        cb.setMinimumSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+        cb.setMaximumSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
         cb.setMaximumRowCount(8);
         cb.setSelectedIndex(0);
         cb.setRenderer(createDropdownRenderer(placeholder, cb));
@@ -308,8 +315,9 @@ public class ComponentGallery {
                 "LigoLab - Twilight"
         });
         themeSelector.setAlignmentX(Component.LEFT_ALIGNMENT);
-        themeSelector.setPreferredSize(new Dimension(220, 24));
-        themeSelector.setMaximumSize(new Dimension(220, 24));
+        themeSelector.setPreferredSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+        themeSelector.setMinimumSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+        themeSelector.setMaximumSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
         themeSelector.addActionListener(e -> {
             Object selected = themeSelector.getSelectedItem();
             if (selected != null) {
@@ -322,18 +330,23 @@ public class ComponentGallery {
     }
 
     private void applyTheme(String theme) {
-        switch (theme) {
-            case "LigoLab - Night":
-                FlatDarkLaf.setup();
-                break;
-            case "LigoLab - Twilight":
-                FlatDarculaLaf.setup();
-                break;
-            case "LigoLab - Day":
-            default:
-                FlatLightLaf.setup();
-                break;
+        try {
+            switch (theme) {
+                case "LigoLab - Night":
+                    UIManager.setLookAndFeel(new FlatDarkLaf());
+                    break;
+                case "LigoLab - Twilight":
+                    UIManager.setLookAndFeel(new FlatDarculaLaf());
+                    break;
+                case "LigoLab - Day":
+                default:
+                    installDayTheme();
+                    break;
+            }
+        } catch (UnsupportedLookAndFeelException ex) {
+            throw new IllegalStateException("Failed to apply theme: " + theme, ex);
         }
+
         if (frame != null) {
             SwingUtilities.updateComponentTreeUI(frame);
             frame.pack();
@@ -356,8 +369,9 @@ public class ComponentGallery {
         JComboBox<String> cb = new JComboBox<>(items);
         cb.setEditable(true);
         cb.setAlignmentX(Component.LEFT_ALIGNMENT);
-        cb.setPreferredSize(new Dimension(220, 24));
-        cb.setMaximumSize(new Dimension(220, 24));
+        cb.setPreferredSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+        cb.setMinimumSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+        cb.setMaximumSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
         cb.setMaximumRowCount(8);
         cb.setSelectedIndex(0);
         JTextField editor = (JTextField) cb.getEditor().getEditorComponent();
@@ -412,33 +426,48 @@ public class ComponentGallery {
         p.add(l);
         p.add(Box.createVerticalStrut(4));
 
-        JButton field = new JButton("Select multiple", new FlatSVGIcon("demo/icons/shevronDown.svg", 16, 16));
-        field.setHorizontalAlignment(SwingConstants.LEFT);
-        field.setHorizontalTextPosition(SwingConstants.LEFT);
-        field.setIconTextGap(4);
+        FlatTextField field = new FlatTextField();
+        field.setText("Select multiple");
+        field.setEditable(false);
+        field.setFocusable(true);
+        field.setCaretColor(new Color(0, 0, 0, 0));
+        field.setLeadingIcon(null);
         field.setAlignmentX(Component.LEFT_ALIGNMENT);
-        field.setPreferredSize(new Dimension(220, 24));
-        field.setMaximumSize(new Dimension(220, 24));
-        field.putClientProperty(FlatClientProperties.STYLE_CLASS, "secondary");
-        field.putClientProperty(FlatClientProperties.STYLE, "margin: 4,4,4,4");
+        field.setPreferredSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+        field.setMinimumSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+        field.setMaximumSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+        field.putClientProperty(FlatClientProperties.STYLE, "focusWidth: 1");
+
+        JLabel chevron = new JLabel(new FlatSVGIcon("demo/icons/shevronDown.svg", 16, 16), SwingConstants.CENTER);
+        chevron.setBorder(new EmptyBorder(0, 4, 0, 4));
+        chevron.setPreferredSize(new Dimension(24, 16));
+        JPanel trailing = new JPanel(new BorderLayout());
+        trailing.setOpaque(false);
+        trailing.add(chevron, BorderLayout.CENTER);
+        field.setTrailingComponent(trailing);
         p.add(field);
 
         JPopupMenu popup = new JPopupMenu();
         popup.setBorder(BorderFactory.createLineBorder(UIManager.getColor("Component.borderColor")));
+        popup.setLayout(new BorderLayout());
 
-        JPanel popupList = new JPanel();
-        popupList.setLayout(new BoxLayout(popupList, BoxLayout.Y_AXIS));
-        popupList.setOpaque(false);
+        JPanel popupContent = new JPanel();
+        popupContent.setOpaque(true);
+        popupContent.setBackground(UIManager.getColor("PopupMenu.background"));
+        popupContent.setLayout(new BoxLayout(popupContent, BoxLayout.Y_AXIS));
 
-        String[] optionTexts = {"Option one", "Option two", "Option three", "Option four", "Option five",
-                "Option six", "Option seven", "Option eight", "Option nine", "Option ten"};
+        String[] optionTexts = {"Option one", "Option two", "Option three", "Option four", "Option five"};
         JCheckBox[] options = new JCheckBox[optionTexts.length];
         for (int i = 0; i < optionTexts.length; i++) {
             JCheckBox cb = new JCheckBox(optionTexts[i]);
             cb.setOpaque(true);
             cb.setBackground(UIManager.getColor("PopupMenu.background"));
-            cb.setBorder(new EmptyBorder(4, 4, 4, 4));
-            cb.setPreferredSize(new Dimension(220, 24));
+            cb.setBorder(new EmptyBorder(6, 8, 6, 8));
+            cb.setIconTextGap(8);
+            cb.setPreferredSize(new Dimension(FIELD_WIDTH, DROPDOWN_ROW_HEIGHT));
+            cb.setMinimumSize(new Dimension(FIELD_WIDTH, DROPDOWN_ROW_HEIGHT));
+            cb.setMaximumSize(new Dimension(FIELD_WIDTH, DROPDOWN_ROW_HEIGHT));
+            cb.setAlignmentX(Component.LEFT_ALIGNMENT);
             if (i == 2) {
                 cb.setEnabled(false); // disabled-row state example from spec
             }
@@ -451,7 +480,7 @@ public class ComponentGallery {
                 @Override
                 public void mouseEntered(java.awt.event.MouseEvent e) {
                     if (cb.isEnabled()) {
-                        Color hover = UIManager.getColor("Custom.neutral_5");
+                        Color hover = UIManager.getColor("Custom.neutral_10");
                         cb.setBackground(hover != null ? hover : UIManager.getColor("Panel.background"));
                     }
                 }
@@ -463,25 +492,51 @@ public class ComponentGallery {
             });
             cb.addActionListener(e -> updateSelectboxFieldText(field, options));
             options[i] = cb;
-            popupList.add(cb);
+            popupContent.add(cb);
         }
 
-        JScrollPane scroll = new JScrollPane(popupList);
-        scroll.setBorder(null);
-        scroll.setPreferredSize(new Dimension(220, 180));
-        popup.add(scroll);
-        popup.addSeparator();
+        popup.add(popupContent, BorderLayout.CENTER);
 
+        JPanel footer = new JPanel();
+        footer.setOpaque(true);
+        footer.setBackground(UIManager.getColor("PopupMenu.background"));
+        footer.setBorder(new EmptyBorder(8, 8, 8, 8));
+        footer.setLayout(new BorderLayout());
         JButton submit = new JButton("Submit");
         submit.setHorizontalAlignment(SwingConstants.CENTER);
-        submit.setPreferredSize(new Dimension(220, 24));
+        submit.setPreferredSize(new Dimension(FIELD_WIDTH - 16, FIELD_HEIGHT));
+        submit.setMinimumSize(new Dimension(FIELD_WIDTH - 16, FIELD_HEIGHT));
+        submit.setMaximumSize(new Dimension(FIELD_WIDTH - 16, FIELD_HEIGHT));
         submit.putClientProperty(FlatClientProperties.STYLE_CLASS, "secondary");
         submit.addActionListener(e -> popup.setVisible(false));
-        popup.add(submit);
+        footer.add(submit, BorderLayout.CENTER);
+        popup.add(footer, BorderLayout.SOUTH);
 
-        field.addActionListener(e -> {
+        Runnable togglePopup = () -> {
             if (field.isEnabled()) {
+                popup.setPopupSize(field.getWidth(), popup.getPreferredSize().height);
                 popup.show(field, 0, field.getHeight() + 2);
+            }
+        };
+
+        field.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (popup.isVisible()) {
+                    popup.setVisible(false);
+                } else {
+                    togglePopup.run();
+                }
+            }
+        });
+        trailing.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (popup.isVisible()) {
+                    popup.setVisible(false);
+                } else {
+                    togglePopup.run();
+                }
             }
         });
         return p;
@@ -494,7 +549,7 @@ public class ComponentGallery {
         return String.format("#%02x%02x%02x", c.getRed(), c.getGreen(), c.getBlue());
     }
 
-    private void updateSelectboxFieldText(JButton field, JCheckBox[] options) {
+    private void updateSelectboxFieldText(JTextField field, JCheckBox[] options) {
         int selectedCount = 0;
         String firstSelected = null;
         String secondSelected = null;
@@ -541,8 +596,9 @@ public class ComponentGallery {
                     }
                     c.setBorder(BorderFactory.createCompoundBorder(
                             BorderFactory.createMatteBorder(0, 0, 1, 0, divider),
-                            new EmptyBorder(4, 4, 4, 4)
+                            new EmptyBorder(8, 4, 8, 4)
                     ));
+                    c.setPreferredSize(new Dimension(owner.getWidth(), DROPDOWN_ROW_HEIGHT));
                 } else {
                     c.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
                 }
@@ -554,6 +610,8 @@ public class ComponentGallery {
     private JComponent buildTabs() {
         JPanel p = new JPanel(new GridLayout(0, 1, 0, 12));
         p.setOpaque(false);
+
+        JTabbedPane pills = createPillTabs();
 
         JTabbedPane basic = new JTabbedPane();
         basic.addTab("Text here", tabContent("Selected"));
@@ -587,11 +645,34 @@ public class ComponentGallery {
         searchClosable.setEnabledAt(3, false);
         searchClosable.setSelectedIndex(0);
 
+        p.add(pills);
         p.add(basic);
         p.add(dot);
         p.add(search);
         p.add(searchClosable);
         return p;
+    }
+
+    private JTabbedPane createPillTabs() {
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.putClientProperty(FlatClientProperties.TABBED_PANE_TAB_TYPE,
+                FlatClientProperties.TABBED_PANE_TAB_TYPE_CARD);
+        tabs.putClientProperty(FlatClientProperties.TABBED_PANE_SHOW_CONTENT_SEPARATOR, false);
+        tabs.putClientProperty(FlatClientProperties.TABBED_PANE_SHOW_TAB_SEPARATORS, false);
+        tabs.putClientProperty(FlatClientProperties.STYLE,
+                "tabArc: 999; contentSeparatorHeight: 0; tabHeight: 32; " +
+                        "tabInsets: 6,16,6,16; tabAreaInsets: 0,0,0,0; " +
+                        "selectedBackground: $Custom.neutral_10; selectedForeground: $Custom.brand_100; " +
+                        "hoverColor: $Custom.neutral_5; focusColor: null");
+
+        tabs.addTab("Text here", tabContent("Selected"));
+        tabs.addTab("Text here", tabContent("Enabled"));
+        tabs.addTab("Text here", tabContent("Enabled"));
+        tabs.addTab("Text here", tabContent("Disabled"));
+        tabs.setEnabledAt(3, false);
+        tabs.setSelectedIndex(0);
+        tabs.setOpaque(false);
+        return tabs;
     }
 
     private JComponent tabContent(String text) {
@@ -700,6 +781,36 @@ public class ComponentGallery {
         return sp;
     }
 
+    private JComponent validationInputDemo() {
+        JPanel p = new JPanel();
+        p.setOpaque(false);
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+
+        JLabel label = new JLabel("Label");
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(label);
+        p.add(Box.createVerticalStrut(4));
+
+        ValidationStateField field = new ValidationStateField(label, "Placeholder", "Focused placeholder");
+        field.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(field);
+        p.add(Box.createVerticalStrut(8));
+
+        JLabel hint = new JLabel("Hover, focus and type to inspect states.");
+        hint.setForeground(UIManager.getColor("Label.disabledForeground"));
+        hint.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(hint);
+        p.add(Box.createVerticalStrut(8));
+
+        JCheckBox disabled = new JCheckBox("Disabled");
+        disabled.setOpaque(false);
+        disabled.setAlignmentX(Component.LEFT_ALIGNMENT);
+        disabled.addActionListener(e -> field.setEnabled(!disabled.isSelected()));
+        p.add(disabled);
+
+        return p;
+    }
+
     private JComponent labeled(String label, JComponent c) {
         // Reusable "label + component" vertical block.
         JPanel p = new JPanel();
@@ -717,5 +828,101 @@ public class ComponentGallery {
         p.add(c);
 
         return p;
+    }
+
+    private static class ValidationStateField extends JTextField {
+        private final JLabel label;
+        private final String idlePlaceholder;
+        private final String focusedPlaceholder;
+        private boolean hover;
+
+        private ValidationStateField(JLabel label, String idlePlaceholder, String focusedPlaceholder) {
+            this.label = label;
+            this.idlePlaceholder = idlePlaceholder;
+            this.focusedPlaceholder = focusedPlaceholder;
+
+            setColumns(18);
+            setMinimumSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+            setMaximumSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+            putClientProperty(FlatClientProperties.OUTLINE, FlatClientProperties.OUTLINE_ERROR);
+            putClientProperty(FlatClientProperties.STYLE,
+                    "arc: 0; focusWidth: 0; innerFocusWidth: 0; placeholderForeground: $Custom.validation_error_placeholder");
+            putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, idlePlaceholder);
+
+            getDocument().addDocumentListener(new DocumentListener() {
+                @Override
+                public void insertUpdate(DocumentEvent e) {
+                    updateState();
+                }
+
+                @Override
+                public void removeUpdate(DocumentEvent e) {
+                    updateState();
+                }
+
+                @Override
+                public void changedUpdate(DocumentEvent e) {
+                    updateState();
+                }
+            });
+
+            addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusGained(FocusEvent e) {
+                    updateState();
+                }
+
+                @Override
+                public void focusLost(FocusEvent e) {
+                    updateState();
+                }
+            });
+
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    hover = true;
+                    updateState();
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    hover = false;
+                    updateState();
+                }
+            });
+
+            updateState();
+        }
+
+        @Override
+        public void setEnabled(boolean enabled) {
+            super.setEnabled(enabled);
+            updateState();
+        }
+
+        private void updateState() {
+            boolean enabled = isEnabled();
+            boolean focused = isFocusOwner();
+            boolean filled = !getText().isBlank();
+
+            putClientProperty(FlatClientProperties.OUTLINE, enabled ? FlatClientProperties.OUTLINE_ERROR : null);
+            putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, focused ? focusedPlaceholder : idlePlaceholder);
+
+            Color normalLabel = UIManager.getColor("Label.foreground");
+            Color disabledLabel = UIManager.getColor("Label.disabledForeground");
+            label.setForeground(enabled ? normalLabel : disabledLabel);
+
+            Color background = UIManager.getColor("TextField.background");
+            if (!enabled) {
+                background = UIManager.getColor("TextField.disabledBackground");
+            } else if (!focused && (hover || filled)) {
+                background = UIManager.getColor("Custom.validation_error_hover_background");
+            } else if (focused) {
+                background = UIManager.getColor("Custom.validation_error_active_background");
+            }
+            setBackground(background);
+            repaint();
+        }
     }
 }
